@@ -26,9 +26,13 @@ class Claude:
         messages.append(assistant_message)
 
     def text_from_message(self, message: Message):
-        return "\n".join(
-            [block.text for block in message.content if block.type == "text"]
-        )
+        text_parts = []
+        for block in message.content:
+            if block.type == "text":
+                text_parts.append(block.text)
+            elif block.type == "tool_use":
+                text_parts.append(f"[Calling tool: {block.name}]")
+        return "\n".join(text_parts)
 
     def chat(
         self,

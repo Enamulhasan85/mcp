@@ -4,33 +4,27 @@ import os
 from dotenv import load_dotenv
 from contextlib import AsyncExitStack
 
-from mcp_client import MCPClient
-from core.claude import Claude
-from core.groq_client import GroqClient
+from mcp_layer.client import MCPClient
+from ai.claude import Claude
+from ai.groq_client import GroqClient
 
-from core.cli_chat import CliChat
-from core.cli import CliApp
+from chat.service import ChatService
+from cli.app import CliApp
 
 load_dotenv()
 
 # Model Selection (use "claude" or "groq")
 model_provider = os.getenv("MODEL_PROVIDER", "claude").lower()
 
-# Anthropic Config
-claude_model = os.getenv("CLAUDE_MODEL", "")
-anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
-
-# Groq Config
-groq_model = os.getenv("GROQ_MODEL", "")
-groq_api_key = os.getenv("GROQ_API_KEY", "")
-
-# Validate based on selected provider
+# Validate provider and get model config
 if model_provider == "claude":
+    claude_model = os.getenv("CLAUDE_MODEL", "")
     assert claude_model, "Error: CLAUDE_MODEL cannot be empty. Update .env"
-    assert anthropic_api_key, "Error: ANTHROPIC_API_KEY cannot be empty. Update .env"
+    assert os.getenv("ANTHROPIC_API_KEY"), "Error: ANTHROPIC_API_KEY cannot be empty. Update .env"
 elif model_provider == "groq":
+    groq_model = os.getenv("GROQ_MODEL", "")
     assert groq_model, "Error: GROQ_MODEL cannot be empty. Update .env"
-    assert groq_api_key, "Error: GROQ_API_KEY cannot be empty. Update .env"
+    assert os.getenv("GROQ_API_KEY"), "Error: GROQ_API_KEY cannot be empty. Update .env"
 else:
     raise ValueError(f"Invalid MODEL_PROVIDER: {model_provider}. Use 'claude' or 'groq'")
 
@@ -66,10 +60,10 @@ async def main():
             )
             clients[client_id] = client
 
-        chat = CliChat(
+        chat = ChatService(
             doc_client=doc_client,
             clients=clients,
-            claude_service=ai_service,  # Works for both Claude and Groq
+            ai_service=ai_service,
         )
 
         cli = CliApp(chat)

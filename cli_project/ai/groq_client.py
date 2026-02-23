@@ -10,28 +10,22 @@ class GroqClient:
     def add_user_message(self, messages: list, message):
         """Add user message to conversation history."""
         if isinstance(message, list):
-            # Handle tool results
-            content = []
+            # Handle tool results - Groq expects them as tool messages
             for item in message:
                 if isinstance(item, dict) and item.get("type") == "tool_result":
-                    # Convert tool result to Groq format
-                    content.append({
-                        "type": "text",
-                        "text": json.dumps({
-                            "tool_call_id": item.get("tool_use_id"),
-                            "result": item.get("content")
-                        })
-                    })
-            user_message = {
-                "role": "user",
-                "content": json.dumps([c["text"] for c in content]) if content else "Tool execution completed"
-            }
+                    # Groq/OpenAI format for tool results
+                    tool_message = {
+                        "role": "tool",
+                        "tool_call_id": item.get("tool_use_id"),
+                        "content": item.get("content") if isinstance(item.get("content"), str) else json.dumps(item.get("content"))
+                    }
+                    messages.append(tool_message)
         else:
             user_message = {
                 "role": "user",
                 "content": message.get("content") if isinstance(message, dict) else message,
             }
-        messages.append(user_message)
+            messages.append(user_message)
 
     def add_assistant_message(self, messages: list, message):
         """Add assistant message to conversation history."""
@@ -67,6 +61,18 @@ class GroqClient:
 
     def text_from_message(self, message):
         """Extract text content from Groq response."""
+        if hasattr(message, "content"):
+            # Use the content we built in chat() method
+            text_parts = []
+            for block in message.content:
+                if hasattr(block, 'type'):
+                    if block.type == 'text' and hasattr(block, 'text'):
+                        text_parts.append(block.text)
+                    elif block.type == 'tool_use' and hasattr(block, 'name'):
+                        # Show which tool is being called
+                        text_parts.append(f"[Calling tool: {block.name}]")
+            return "\n".join(text_parts) if text_parts else ""
+        
         if hasattr(message, "choices") and len(message.choices) > 0:
             return message.choices[0].message.content or ""
         return ""
@@ -115,8 +121,19 @@ class GroqClient:
                 for tool in tools
             ]
             params["tools"] = groq_tools
+            params["tool_choice"] = "auto"  # Let model decide when to use tools
+            params["parallel_tool_calls"] = False  # Disable parallel calls for stability
 
-        response = self.client.chat.completions.create(**params)
+        try:
+            response = self.client.chat.completions.create(**params)
+        except Exception as e:
+            # If tool calling fails, retry without tools
+            if tools and "tool_use_failed" in str(e):
+                print(f"\nWarning: Tool calling failed ({e}). Retrying without tools...")
+                params_no_tools = {k: v for k, v in params.items() if k not in ["tools", "tool_choice", "parallel_tool_calls"]}
+                response = self.client.chat.completions.create(**params_no_tools)
+            else:
+                raise
         
         # Add a stop_reason attribute for compatibility with Claude response format
         if hasattr(response.choices[0], "finish_reason"):

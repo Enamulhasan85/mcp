@@ -12,18 +12,6 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/cli_project"
             }
-        },
-        {
-            "name": "Python: CLI Project (External Terminal)",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/cli_project/main.py",
-            "console": "externalTerminal",
-            "cwd": "${workspaceFolder}/cli_project",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/cli_project"
-            }
         }
     ]
 }
