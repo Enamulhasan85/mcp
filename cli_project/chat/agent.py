@@ -6,7 +6,7 @@ from mcp_layer.tools import ToolManager
 from anthropic.types import MessageParam
 
 
-class Chat:
+class ChatAgent:
     def __init__(self, ai_service: Union[Claude, GroqClient], clients: dict[str, MCPClient]):
         self.ai_service: Union[Claude, GroqClient] = ai_service
         self.clients: dict[str, MCPClient] = clients

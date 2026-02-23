@@ -2,7 +2,7 @@ from typing import List, Tuple, Union
 from mcp.types import Prompt, PromptMessage
 from anthropic.types import MessageParam
 
-from chat.agent import Chat
+from chat.agent import ChatAgent
 from chat.utils import convert_prompt_messages_to_message_params
 from ai.claude import Claude
 from ai.groq_client import GroqClient
@@ -26,7 +26,7 @@ Answer the user's question directly and concisely. Start with the exact informat
 Don't refer to or mention the provided context in any way - just use it to inform your answer."""
 
 
-class ChatService(Chat):
+class ChatService(ChatAgent):
     def __init__(
         self,
         doc_client: MCPClient,
