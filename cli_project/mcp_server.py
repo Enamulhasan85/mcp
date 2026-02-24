@@ -32,8 +32,27 @@ def edit_doc(doc_name: str, old_string: str, new_content: str):
     else:
         raise ValueError(f"Document '{doc_name}' not found.")
 
-# TODO: Write a resource to return all doc id's
-# TODO: Write a resource to return the contents of a particular doc
+@mcp.resource(
+    name="list_docs", 
+    description="Return a list of all document names.", 
+    uri="docs://documents",
+    mime_type="application/json"
+)
+def list_docs() -> list[str]:
+    return list(docs.keys())
+
+@mcp.resource(
+    name="get_doc", 
+    description="Return the contents of a specific document.",
+    uri="docs://documents/{doc_name}",
+    mime_type="text/plain"
+)
+def get_doc(doc_name: str) -> str:
+    content = docs.get(doc_name, "Document not found.")
+    if content == "Document not found.":
+        raise ValueError(f"Document '{doc_name}' not found.")
+    return content
+
 # TODO: Write a prompt to rewrite a doc in markdown format
 # TODO: Write a prompt to summarize a doc
 
