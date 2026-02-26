@@ -48,7 +48,7 @@ class ChatService(ChatAgent):
     async def get_prompt(
         self, command: str, doc_id: str
     ) -> list[PromptMessage]:
-        return await self.doc_client.get_prompt(command, {"doc_id": doc_id})
+        return await self.doc_client.get_prompt(command, {"doc_name": doc_id})
 
     async def _extract_resources(self, query: str) -> str:
         mentions = [word[1:] for word in query.split() if word.startswith("@")]
@@ -74,7 +74,7 @@ class ChatService(ChatAgent):
         command = words[0].replace("/", "")
 
         messages = await self.doc_client.get_prompt(
-            command, {"doc_id": words[1]}
+            command, {"doc_name": words[1]}
         )
 
         self.messages += convert_prompt_messages_to_message_params(messages)
