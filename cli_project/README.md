@@ -121,6 +121,77 @@ Use the / prefix to execute commands defined in the MCP server:
 
 Commands will auto-complete when you press Tab.
 
+## MCP Architecture Flow
+
+The application uses the Model Context Protocol (MCP) to enable tool use and resource access. Here's how the data flows during program execution:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         main.py                                  │
+│  1. Initializes AI service (Claude or Groq)                      │
+│  2. Creates MCPClient connections to MCP servers                 │
+│  3. Creates ChatService with doc_client, clients, ai_service     │
+│  4. Creates CliApp with ChatService                              │
+│  5. Calls cli.initialize() and cli.run()                         │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        CliApp                                    │
+│  - initialize(): fetches resources & prompts from ChatService    │
+│  - run(): interactive prompt loop                                │
+│    • Gets user input                                             │
+│    • Calls ChatService.run(user_input)                           │
+│    • Displays AI response                                        │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                ChatService (extends ChatAgent)                   │
+│  - _process_query(query):                                        │
+│    • If /command → gets prompt from mcp_server via MCPClient     │
+│    • Otherwise → extracts @mentions, retrieves doc resources     │
+│      via MCPClient, builds prompt with context                   │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+           ┌─────────────────┴─────────────────┐
+           │ MCPClient (resources & prompts)    │
+           │ read_resource(), get_prompt()      │
+           │        │                           │
+           │        ▼                           │
+           │   mcp_server.py                    │
+           │   • Resources: list_docs, get_doc  │
+           │   • Prompts: (defined by server)   │
+           └───────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       ChatAgent.run()                            │
+│  - Agentic loop:                                                 │
+│    1. Send messages + tools to AI service (Claude/Groq)          │
+│    2. If AI response is tool_use → go to ToolManager             │
+│    3. Add tool results to conversation, repeat from step 1       │
+│    4. If AI response is final text → return to CliApp            │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ (on tool_use)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      ToolManager                                 │
+│  - get_all_tools(): collects tools from all MCPClients           │
+│  - execute_tool_requests(): finds client with matching tool,     │
+│    calls tool via MCPClient, returns results to ChatAgent        │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+           ┌─────────────────┴─────────────────┐
+           │ MCPClient (tool execution)         │
+           │ list_tools(), call_tool()          │
+           │        │                           │
+           │        ▼                           │
+           │   mcp_server.py                    │
+           │   • Tools: read_doc, edit_doc      │
+           └───────────────────────────────────┘
+```
+
 ## Development
 
 ### Adding New Documents
@@ -137,3 +208,5 @@ To fully implement the MCP features:
 ### Linting and Typing Check
 
 There are no lint or type checks implemented.
+
+Remember: the best code is the code that works!
